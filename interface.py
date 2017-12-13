@@ -1,200 +1,271 @@
 #Importation de module
 from tkinter import *
-import tkinter as tk
-from tkinter import ttk
+import tkinter.font
+from tkinter.filedialog import *
+import tkinter.messagebox
+from os.path import basename
+from aPropos import *
+from creer import *
+from regle import *
+from action import*
+from renommage import *
+from lister import *
 
-class Application(Frame):
-    def __init__(self, master = None):
-        Frame.__init__(self, master)
+class Interface:    
+    """
+       Classe qui affiche la fenetre principal
+    """
+    def __init__(self, am = "Aucun", ap = "", pr = "", nomf = True, pos = "", ext = "", nr = ""):
+        """
+           Constructeur de la fenêtre permet de définir la fenetre, le menu 
+        """
 
-        #------------------------------------------------------------------------------------
-        #           Création du menu
-        #------------------------------------------------------------------------------------
-         
+        #Creation des attributs de la classe
+        self.amorceTxt = am
+        self.apartirdeTxt = ap
+        self.prefixeTxt = pr
+        self.nomFichierTxt = nomf
+        self.postfixeTxt = pos
+        self.extensionsTxt = ext
+        self.nomRepertoire = nr
+        
+        #Creation de la fenetre principal
+        self.fenetre = Tk()
+
+        #Titre de la fenêtre
+        self.fenetre.title("Renommage de fichier")
+
+        #Taille de la fenêtre et sa position quand on lance l'appli
+        self.fenetre.geometry("%dx%d%+d%+d" %(1000,400,250,200))
+
+        #----------------------------------------#
+        #            Creation du menu            #
+        #----------------------------------------#
+        
         #Creation de la barre de menu
-        self.barremenu = tk.Menu(self.master)
-
+        self.barremenu = Menu(self.fenetre)
+        
         #Creation du menu "Règles"
-        self.regles = tk.Menu(self.barremenu, tearoff = 0)
-        self.barremenu.add_cascade(label = "Règles", underline = 0, menu = self.regles)
-        self.regles.add_command(label = "Lister les règles", underline = 0, command = self.lister)
-        self.regles.add_command(label = "Créer une règle", underline = 0, command = self.creer)
-        self.regles.add_command(label = "Quitter", underline = 0, command = self.quitter)
-
+        self.regles = Menu(self.barremenu, tearoff = 0)
+        self.barremenu.add_cascade(label = "Règles", menu = self.regles)
+        self.regles.add_command(label = "Lister les règles", command = self.lister)
+        self.regles.add_command(label = "Crèer une règle", command = self.creer)
+        self.regles.add_command(label = "Quitter", command = self.fenetre.destroy)
+        
         #Creation du menu "?"
-        self.aide = tk.Menu(self.barremenu, tearoff = 0)
-        self.barremenu.add_cascade(label = "?", underline = 0, menu = self.aide)
-
+        self.aide = Menu(self.barremenu, tearoff = 0)
+        self.barremenu.add_cascade(label = "?", menu = self.aide)
+        self.aide.add_command(label = "A propos", command = self.aPropos)
+        
         #Afficher le menu
-        self.master.config(menu = self.barremenu)
+        self.fenetre.config(menu = self.barremenu)
+        
+        #----------------------------------------------------#
+        #   Creation des champs qui seront dans la fenetre   #
+        #----------------------------------------------------#
 
-    #---------------------------------------------------------------------------------------
-    #           Fonction que le menu renvoi
-    #---------------------------------------------------------------------------------------
-         
-    #Premier onglet du menu
-    def lister(self):
-        fenetreLister = tk.Tk()
-        fenetreLister.title("Lister les règles")
-        fenetreLister.geometry("%dx%d%+d%+d" %(1000,400,250,200))
+        #Police des labels
+        titrePolice = font.Font(size = 14, weight = "bold", underline = 1, slant = "italic")
+        labelPolice = font.Font(size = 11, slant = "italic")
+        
+        #Titre de la fenêtre
+        self.titre = Label(self.fenetre, text = "\nRenommer en lots", font = titrePolice)
+        self.titre.pack()
+
+        #Nom repertoire
+        self.frame1 = Frame(self.fenetre,borderwidth = 0, relief = GROOVE)
+        self.frame1.place(x = 200, y = 100)
+        self.label1 = Label(self.frame1,text = "Nom du rèpertoire :", font = labelPolice)
+        self.label1.pack(side = "left", fill = "both")
+        self.string11 = StringVar()
+        self.string11.set(self.nomRepertoire)
+        self.saisie1 = Entry(self.frame1, width = 60, textvariable = self.string11)
+        self.saisie1.pack(side = "right", fill = "both", padx = 3, pady = 3)
+
+        #Image ne reconnait pas les png que les gif (dans version python que j'ai 
+        self.image = PhotoImage(file = "../image/logo_python.gif")
+        self.frame1bis = Frame(self.fenetre,borderwidth = 0, relief = GROOVE)
+        self.frame1bis.place(x = 780, y = 5)
+        self.canvas = Canvas(self.frame1bis, width = 200, height = 190)
+        self.canvas.create_image(0, 0, anchor = NW, image = self.image)
+        self.canvas.pack(side = "top", fill = "both", padx = 3, pady = 3)
+
+        #Amorce (avec une list)
+        self.frame2 = Frame(self.fenetre, borderwidth = 0, relief = GROOVE)
+        self.frame2.place(x = 50, y = 200)
+        self.label2 = Label(self.frame2, text = "Amorce", font = labelPolice)
+        self.label2.pack(side = "top", fill = "both")
+        self.optionListe = ("Aucun", "Lettre", "Chiffre")
+        self.string1 = StringVar()
+        self.string1.set(self.amorceTxt)
+        self.list1 = OptionMenu(self.frame2, self.string1, *self.optionListe)
+        self.list1.pack(side = "bottom", fill = "both")
+
+        #Prefixe
+        self.frame3 = Frame(self.fenetre, borderwidth = 0,relief = GROOVE)
+        self.frame3.place(x = 150, y = 200)
+        self.label3 = Label(self.frame3, text = "Préfixe", font = labelPolice)
+        self.label3.pack(side = "top", fill = "both")
+        self.string3 = StringVar()
+        self.string3.set(self.prefixeTxt)
+        self.saisie2 = Entry(self.frame3, width = 20, textvariable = self.string3)
+        self.saisie2.pack(side = "bottom", fill = "both")
+
+        #Nom fichier (avec radio button)
+        self.frame4 = Frame(self.fenetre, borderwidth = 0, relief = GROOVE)
+        self.frame4.place(x = 280, y = 200)
+        self.label4 = Label(self.frame4, text = "Nom du fichier", font = labelPolice)
+        self.label4.pack(side = "top", fill = "both")
+        self.valeur1 = StringVar()
+        self.valeur2 = StringVar()
+        if(self.nomFichierTxt != True):
+            self.valeur2.set(self.nomFichierTxt)
+        self.choix1 = Radiobutton(self.frame4, text = "Nom Original", variable = self.valeur1, value = 1)
+        self.choix1.pack()
+        self.frame5= Frame(self.frame4, borderwidth = 0, relief = GROOVE)
+        self.frame5.pack(side = LEFT)
+        self.choix2 = Radiobutton(self.frame5, variable = self.valeur1, value = 2)
+        self.entryChoix = Entry(self.frame5, textvariable = self.valeur2)
+        self.choix2.pack(side = LEFT)
+        if(self.nomFichierTxt == True):
+            self.choix1.select()
+        else:
+            self.choix2.select()
+        self.entryChoix.pack(side = RIGHT)
+
+        #Postfix
+        self.frame6 = Frame(self.fenetre, borderwidth = 0, relief = GROOVE)
+        self.frame6.place(x = 480,y = 200)
+        self.label5 = Label(self.frame6, text = "Postfix", font = labelPolice)
+        self.label5.pack(side = "top", fill = "both")
+        self.string6 = StringVar()
+        self.string6.set(self.string6)
+        self.saisie3 = Entry(self.frame6, width = 20, textvariable = self.string6)
+        self.saisie3.pack(side = "bottom", fill = "both")
+
+        #Extension concernee
+        self.frame7 = Frame(self.fenetre, borderwidth = 0, relief = GROOVE)
+        self.frame7.place(x = 630, y = 200)
+        self.label6 = Label(self.frame7, text = "Extension concernée (.gif, .jpg, ...)", font = labelPolice)
+        self.label6.pack(side = "top", fill = "both")
+        self.string7 = StringVar()
+        self.string7.set(self.string7)
+        self.saisie4 = Entry(self.frame7, width = 20, textvariable = self.string7)
+        self.saisie4.pack(side = "bottom", fill = "both")
+
+        #A partir de
+        self.frame8 = Frame(self.fenetre, borderwidth = 0, relief = GROOVE)
+        self.frame8.place(x = 50, y = 300)
+        self.label7 = Label(self.frame8, text = "A partir de", font = labelPolice)
+        self.label7.pack(side = "top", fill = "both")
+        self.string8 = StringVar()
+        self.string8.set(self.apartirdeTxt)
+        self.saisie5 = Entry(self.frame8, width = 20, textvariable = self.string8)
+        self.saisie5.pack(side = "bottom", fill = "both")
+
+        #Renommer (button)
+        self.bouton2 = Button(self.fenetre, text = "Renommer", width = 20, command = self.rename)
+        self.bouton2.place(x = 630, y = 310)
+
+        #Demarage de la boucle Tkinter qui s'interompt quand on ferme
+        self.fenetre.mainloop()  
+
+    #-----------------------------------------#
+    #   Creation des fonctions de la fenetre   #
+    #-----------------------------------------# 
+    
+    def aPropos(self):
+        """
+            Fonction qui permet d'appeler l'interface a propos
+        """
+        Apropos()
+        return True
 
     def creer(self):
-        fenetreLister = tk.Tk()
-        fenetreLister.title("Creation d'un règle")
-        fenetreLister.geometry("%dx%d%+d%+d" %(1000,400,250,200))
+        """
+            Fonction qui permet d'appeler l'interface creer
+        """
+        self.fenetre.destroy()
+        Creer()
+        return True
+
+    def lister(self):
+        """
+            Fonction qui permet d'appeler l'interface lister
+        """
+        self.fenetre.destroy()
+        Lister()
+        return True
+
+    def set_nomFichier(self):
+        """
+           Pas encore totalement fini 
+        """
+        #Récupération de la valeur dans nom rèpertoire
+        nomRepert = self.saisi1.get()
         
-    def quitter(self):
-        self.master.destroy()
-
-    #Deuxième onglet du menu
-    def apropos(self):
-        fenetreLister = tk.Tk()
-        fenetreLister.title("A propos")
-        fenetreLister.geometry("%dx%d%+d%+d" %(1000,400,250,200))
-
-#------------------------------------------------------------------------------------------
-#           Fonction qui renvoi les boutons du menu 
-#------------------------------------------------------------------------------------------
-         
-def boutons():
-
-    #Police des labels
-    titrePolice = tk.font.Font(size = 14, weight = "bold", underline = 1, slant = "italic")
-    labelPolice = tk.font.Font(size = 11, slant = "italic")
-    
-    #Titre de la fenêtre
-    frame = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame.place(x = 450, y = 10)
-    titre1 = Label(frame, text = "Renommer en lots", font = titrePolice)
-    titre1.pack(side = "top")
-
-
-    #Premiere ligne de la fenêtre
-    frame2 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame2.place(x = 300, y = 70)
-    label_nomRepe = Label(frame2, text = "Nom du répertoire", font = labelPolice)
-    label_nomRepe.pack(side = "left")
-
-    frame3 = Frame(frame2, borderwidth = 0, relief= GROOVE)
-    frame3.place(x = 300, y = 10)
-    var_text = StringVar()
-    text_nomRepe = Entry(frame2, textvariable = var_text, width= 40)
-    text_nomRepe.pack(padx = 10)
-
-    frame4 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame4.place(x = 750, y = 65)
-    bouton_imagePerso = Button(frame4, text= "Image personnalisée \n de votre logiciel", font = labelPolice, width = 25, height = 3)
-    bouton_imagePerso.pack(side = "right")
-
-
-    #deuxième ligne de la fenêtre    
-    frame5 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame5.place(x = 40, y = 130)
-    label_amorce = Label(frame5, text = "Amorce", font = labelPolice)
-    label_amorce.pack(side = "left")
-
-    frame6 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    label_preFixe = Label(frame5, text = "Préfixe", font = labelPolice)
-    label_preFixe.pack(side = "left", padx = 32)
-
-    frame7 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    label_nomFich = Label(frame5, text = "Nom du fichier", font = labelPolice)
-    label_nomFich.pack(side = "left", padx = 30)
-
-    frame8 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    label_postFixe = Label(frame5, text = "Postfixe", font = labelPolice)
-    label_postFixe.pack(side = "left", padx = 30)
-    
-    frame9 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    label_extension = Label(frame5, text = "Extension concernée", font = labelPolice)
-    label_extension.pack(side = "left", padx = 50)
-
-    
-    #Troisième ligne de la fenêtre
-    var_case = IntVar()
-    
-    frame10 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame10.place(x = 20, y = 150)
-    radio_aucune = Radiobutton(frame10, text = "Aucune", variable = var_case, value = 1)
-    radio_aucune.pack(side = "left")
-
-    frame11 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame11.place(x = 20, y = 175)
-    radio_lettre = Radiobutton(frame11, text = "Lettre", variable = var_case, value = 2)
-    radio_lettre.pack(side = "left")
-
-    frame12 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame12.place(x = 20, y = 200)
-    radio_chiffre = Radiobutton(frame12, text = "Chiffre", variable = var_case, value = 3)
-    radio_chiffre.pack(side = "left")
-
-    frame13 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame13.place(x = 120, y = 150)
-    var_text2 = StringVar()
-    text_preFixe = Entry(frame13, textvariable = var_text2, width= 10)
-    text_preFixe.pack(side = "left")
-
-    frame14 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame14.place(x = 200, y = 150)
-    radio_nomOriginal = Radiobutton(frame14, text = "Nom original", variable = var_case, value = 4)
-    radio_nomOriginal.pack(side = "left")
-
-    frame15 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame15.place(x = 200, y = 175)
-    radio_nomFichier = Radiobutton(frame15, variable = var_case, value = 5)
-    radio_nomFichier.pack(side = "left")
-
-    frame16 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    var_text3 = StringVar()
-    text_nomFich = Entry(frame15, textvariable = var_text3, width= 20)
-    text_nomFich.pack(side = "left")
-
-    frame17 = Frame(fenetre, borderwidth = 0, relief = GROOVE)
-    frame17.place(x = 380, y = 150)
-    var_text4 = StringVar()
-    text_postFixe = Entry(frame17, textvariable = var_text4, width= 20)
-    text_postFixe.pack(side = "left")
-
-    frame18 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame18.place(x = 547, y = 150)
-    var_text5 = StringVar()
-    text_extension = Entry(frame18, textvariable = var_text5, width= 20)
-    text_extension.pack(side = "right")
-
-
-    #Quatrième ligne de la fenêtre
-    frame19 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame19.place(x = 20, y = 250)
-    label_aPartir = Label(frame19, text = "A partir de", font = labelPolice)
-    label_aPartir.pack(side = "bottom")
-
-    frame20 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame20.place(x = 20, y = 270)
-    var_text6 = StringVar()
-    text_aPartir = Entry(frame20, textvariable = var_text6, width= 10)
-    text_aPartir.pack(side = "bottom")
-
-    frame21 = Frame(fenetre, borderwidth = 0, relief= GROOVE)
-    frame21.place(x = 580, y = 270)
-    bouton_renommer = Button(frame21, text= "Renommer", font = labelPolice, width = 10, height = 2)
-    bouton_renommer.pack(side = "bottom")
-    
-#------------------------------------------------------------------------------------------
-#           Création de la fenêtre principal
-#------------------------------------------------------------------------------------------
+        #Récuperation d'un fichier SANS son extension  
+        nomFichier = os.path.splitext(basename(nomRepert))[0]
  
-#Creation de la fenêtre
-fenetre = tk.Tk()
+        #Récuperation de l'extension d'un fichier 
+        chemin, extension = os.path.splitext(nomRepert)
 
-#Titre de la fenêtre
-fenetre.title("Renommage de fichier")
-app = Application(fenetre)
+        #Récuperation de la valeur radiobouton
+        choix = self.valeur1.get()
 
-#Taille de la fenêtre et sa position quand on lance l'appli
-fenetre.geometry("%dx%d%+d%+d" %(1000,330,200,200))
+        #Récupération du champ nom fichier
+        choixNomFicher = self.entryChoix.get()
 
-#Appelle de la fonction bouton
-boutons()
 
-#Démarage de la boucle Tkinter qui s'interompt quand on ferme
-fenetre.mainloop()
+        #Si le radio bouton est sur nom origne on fait le code du if sinon on fait le code du else
+        if choix == "1":
+            #Permet de désactiver le champ de l'autre radioButton et de le cleaner
+            self.entryChoix.delete(0, END)
+            self.entryChoix.config(state = "disabled")
+            messagebox.showinfo("Mot changer ", set_preFix())
+        else:
+            self.entryChoix.config(state = "normal")
+            print(choixNomFicher)
+
+    def rename(self):       
+        """
+           Fonction qui permet de renommer un fichier quand a cliquer sur le bouton
+        """
+        repertoire = self.saisie1.get()
+        prefixe = self.saisie2.get()
+        postfixe = self.saisie3.get()
+        amorce = self.string1.get()
+        apartirde = self.saisie5.get()
+
+        if len(apartirde) <= 3 and ((amorce == "Chiffre" and (apartirde.isnumeric() or apartirde == "")) or (amorce == "Lettre" and (apartirde.isalpha() or apartirde == ""))) or amorce == "Aucun":
+            if amorce == "Chiffre" and apartirde =="":
+                apartirde = 1
+            if amorce == "Lettre" and apartirde =="":
+                apartirde = "A"
+            if self.valeur1.get() == "1":
+                nomFichier = True
+            if self.valeur1.get() == "2":
+                nomFichier = self.valeur2.get()
+            extensions = self.saisie4.get().split(",")
+
+            #Instanciation d'une Regle
+            regle = Regle(amorce, apartirde, prefixe, nomFichier, postfixe)
+            for i in extensions:
+                regle.ajoutExtension(i)
+            
+            #Instanciation d'une Action
+            action = Action(repertoire, regle)
+            
+            #Appel de la mèthode Action::simule()
+            simule = action.simule()
+        
+            #Affichage de la simulation dans un message Box
+            if(repertoire != ""):
+                showinfo("Simulation", simule())
+                return True
+        else:
+            showinfo("Simulation", "Veuillez saisir un rèpertoire")
+        return False
+
+#Instanciation de la classe 
+inter = Interface()
